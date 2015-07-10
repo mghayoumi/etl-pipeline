@@ -36,6 +36,7 @@
 
     <properties>
       <jackson-version>2.4.2</jackson-version>
+      <slf4j-version>1.7.10</slf4j-version>
     </properties>
 
     <dependencies>
@@ -89,13 +90,14 @@
         <groupId>org.restlet.jee</groupId>
         <artifactId>org.restlet.ext.httpclient</artifactId>
         <version>2.2.3</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>httpcore</artifactId>
+            <groupId>org.apache.httpcomponents</groupId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.10</version>
-        </dependency>
       <dependency>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-jetty-common</artifactId>
@@ -113,8 +115,13 @@
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>fluent-hc</artifactId>
+        <version>4.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
-        <version>4.4.1</version>
+        <version>4.5</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -134,7 +141,31 @@
         <version>${jackson-version}</version>
       </dependency>
 
+      <!-- Logging -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j-version}</version>
+      </dependency>
 
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>${slf4j-version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>18.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
