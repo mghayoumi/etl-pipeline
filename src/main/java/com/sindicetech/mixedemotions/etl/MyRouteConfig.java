@@ -73,7 +73,7 @@ public class MyRouteConfig extends RouteBuilder {
       DwApiBean dwApiBean = new DwApiBean();
 
       from("timer://foo?fixedRate=true&period=5000")
-          .bean(dwApiBean, "download");
+          .bean(dwApiBean, "process");
 
       from("direct:asdf")
           .to("log:com.jakub123?level=INFO");

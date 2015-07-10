@@ -91,7 +91,7 @@
         <artifactId>org.restlet.ext.httpclient</artifactId>
         <version>2.2.3</version>
         <exclusions>
-          <exclusion>
+          <exclusion><!-- broken version of httpcore: https://issues.apache.org/jira/browse/HTTPCLIENT-1611 -->
             <artifactId>httpcore</artifactId>
             <groupId>org.apache.httpcomponents</groupId>
           </exclusion>
