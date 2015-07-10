@@ -70,13 +70,14 @@ public class MyRouteConfig extends RouteBuilder {
 //          .to("restlet:http://www.dw.com/api/list/mediacenter/2?restletMethod=GET")
 //          .to("log:com.RESTLETXXX?level=INFO");
 
-      DwApiBean dwApiBean = new DwApiBean();
+      DwApiBean dwApiBean = new DwApiBean(producer);
 
       from("timer://foo?fixedRate=true&period=5000")
           .bean(dwApiBean, "process");
 
       from("direct:asdf")
-          .to("log:com.jakub123?level=INFO");
+          .to("log:com.jakub123?level=INFO")
+      .to("file:target/items");
     }
 }
 
