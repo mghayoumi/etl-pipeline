@@ -21,27 +21,30 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.component.log.LogComponent;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.SimpleRegistry;
-import org.camelcookbook.structuringroutes.simple.LogMessageOnTimerEventRouteBuilder;
 
 /**
  * Example that demonstrates how to run the Camel runtime in a standalone Java application.
  */
 public class DwCamelApplication {
-    public static void main(String[] args) throws Exception {
-        SimpleRegistry registry = new SimpleRegistry();
-        // add POJOs to the registry here using registry.put("name", <object reference>)
 
-        CamelContext context = new DefaultCamelContext(registry);
+  public static void main(String[] args) throws Exception {
+    SimpleRegistry registry = new SimpleRegistry();
+    // add POJOs to the registry here using registry.put("name", <object reference>)
 
-        context.addComponent("mylogger", new LogComponent());
-        context.addRoutes(new LogMessageOnTimerEventRouteBuilder());
+    CamelContext context = new DefaultCamelContext(registry);
 
-        context.start();
+    context.addComponent("log", new LogComponent());
+    context.addRoutes(new DwRoute());
 
-        // let the Camel runtime do its job for 5 seconds
-        Thread.sleep(5000);
+    context.start();
 
-        // shutdown
-        context.stop();
-    }
+    // let the Camel runtime do its job for 5 seconds
+    Thread.sleep(5000);
+
+    // shutdown
+    context.stop();
+
+    System.exit(0);
+  }
+
 }

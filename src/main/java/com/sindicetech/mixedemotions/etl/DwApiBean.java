@@ -6,14 +6,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.component.file.FileComponent;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Content;
 import org.apache.http.client.fluent.Request;
-import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.slf4j.Logger;
@@ -23,15 +19,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
  *
  */
 public class DwApiBean {
+
   private Logger logger = LoggerFactory.getLogger(this.getClass());
   private static ObjectMapper mapper = new ObjectMapper();
+
   private final ProducerTemplate producer;
+  public static final String ENDPOINT = "direct:DwApi";
+
   private LocalDate lastItemDate = LocalDate.parse("1015-07-11T00:00:00.000Z", DateTimeFormatter.ISO_ZONED_DATE_TIME);
 
   private CloseableHttpAsyncClient httpClient;
@@ -72,7 +74,10 @@ public class DwApiBean {
         Content content = Request.Get(url).execute().returnContent();
         JsonNode node = mapper.readTree(content.asStream());
 
-        producer.sendBodyAndHeader("direct:asdf", mapper.writeValueAsString(node), Exchange.FILE_NAME, node.get("id").asText());
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(Exchange.FILE_NAME, node.get("id").asText());
+        headers.put("DwItemUrl", url);
+        producer.sendBodyAndHeaders(ENDPOINT, mapper.writeValueAsString(node), headers);
       }
 
     }

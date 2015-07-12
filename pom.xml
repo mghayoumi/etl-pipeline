@@ -37,90 +37,30 @@
     <properties>
       <jackson-version>2.4.2</jackson-version>
       <slf4j-version>1.7.10</slf4j-version>
+      <camel-version>2.15.2</camel-version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-core</artifactId>
-            <version>2.15.2</version>
-        </dependency>
 
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test</artifactId>
-            <version>2.15.2</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-spring</artifactId>
-            <version>2.15.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-jdbc</artifactId>
-            <version>2.15.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-jdbc</artifactId>
-            <version>4.1.6.RELEASE</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-expression</artifactId>
-            <version>4.1.6.RELEASE</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.derby</groupId>
-            <artifactId>derby</artifactId>
-            <version>10.11.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-restlet</artifactId>
-            <version>2.15.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.restlet.jee</groupId>
-            <artifactId>org.restlet.ext.spring</artifactId>
-            <version>2.2.3</version>
-        </dependency>
-      <!-- Restlet -->
       <dependency>
-        <groupId>org.restlet.jee</groupId>
-        <artifactId>org.restlet</artifactId>
-        <version>2.2.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.restlet.jee</groupId>
-        <artifactId>org.restlet.ext.httpclient</artifactId>
-        <version>2.2.3</version>
-        <exclusions>
-          <exclusion><!-- broken version of httpcore: https://issues.apache.org/jira/browse/HTTPCLIENT-1611 -->
-            <artifactId>httpcore</artifactId>
-            <groupId>org.apache.httpcomponents</groupId>
-          </exclusion>
-        </exclusions>
+          <groupId>org.apache.camel</groupId>
+          <artifactId>camel-core</artifactId>
+          <version>${camel-version}</version>
       </dependency>
 
       <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-jetty-common</artifactId>
-        <version>2.15.2</version>
+          <groupId>org.apache.camel</groupId>
+          <artifactId>camel-test</artifactId>
+          <version>${camel-version}</version>
+          <scope>test</scope>
       </dependency>
+
       <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-jetty8</artifactId>
-        <version>2.15.2</version>
+          <groupId>org.apache.camel</groupId>
+          <artifactId>camel-jackson</artifactId>
+          <version>${camel-version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-jetty9</artifactId>
-        <version>2.15.2</version>
-      </dependency>
+
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>fluent-hc</artifactId>
@@ -174,6 +114,7 @@
         <version>4.12</version>
         <scope>test</scope>
       </dependency>
+
     </dependencies>
 
     <build>
