@@ -12,7 +12,7 @@ Hawt.io is a web application that provides monitoring of for example Apache Came
 
 After the pipeline starts up, you can view a preconfigured dashboard at http://localhost:8080/hawtio/dashboard/id/512cefc2bdb5015495
 
-[Read more words!](docs/img/hawtio.png)
+![Hawt.io dashboard screenshot](docs/img/hawtio.png)
 
 ## Development
 To easily run Hawt.io during development, you have to initialize the hawtio_conf/ directory download the hawtio war first.
