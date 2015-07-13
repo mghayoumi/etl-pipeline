@@ -159,11 +159,6 @@
               </dependency>
             </dependencies>
           </plugin>
-          <plugin>
-            <groupId>org.mortbay.jetty</groupId>
-            <artifactId>jetty-maven-plugin</artifactId>
-            <version>8.1.16.v20140903</version>
-          </plugin>
 
           <!--
           It's necessary to use Shade in order to append service files in META-INF which declare e.g. TypeConverters.
