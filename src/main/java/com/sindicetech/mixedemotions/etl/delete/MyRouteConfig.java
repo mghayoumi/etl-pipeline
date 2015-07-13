@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.delete;
 
+import com.sindicetech.mixedemotions.etl.DwApiBean;
 import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;

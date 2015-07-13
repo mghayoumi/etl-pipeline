@@ -1,0 +1,81 @@
+{
+  "title": "Json-Builder Flow",
+  "group": "Personal",
+  "widgets": [
+    {
+      "id": "w2",
+      "title": "Json-Builder Flow",
+      "row": 1,
+      "col": 1,
+      "size_x": 2,
+      "size_y": 3,
+      "path": "camel/routes",
+      "include": "app/camel/html/routes.html",
+      "search": {
+        "tab": "camel",
+        "nid": "root-org.apache.camel-camel-1-routes-%22route1%22"
+      },
+      "hash": ""
+    },
+    {
+      "id": "w6",
+      "title": "Flow processing stats",
+      "row": 1,
+      "col": 3,
+      "size_x": 3,
+      "size_y": 4,
+      "path": "jmx/charts",
+      "include": "app/jmx/html/charts.html",
+      "search": {
+        "href": "",
+        "nid": "root-org.apache.camel-camel-1-context-%22camel-1%22"
+      },
+      "hash": ""
+    },
+    {
+      "id": "w3",
+      "title": "Java Heap Memory",
+      "row": 5,
+      "col": 4,
+      "size_x": 2,
+      "size_y": 2,
+      "path": "jmx/widget/donut",
+      "include": "app/jmx/html/donutChart.html",
+      "search": {},
+      "hash": "",
+      "routeParams": "{\"type\":\"donut\",\"title\":\"Java Heap Memory\",\"mbean\":\"java.lang:type=Memory\",\"attribute\":\"HeapMemoryUsage\",\"total\":\"Max\",\"terms\":\"Used\",\"remaining\":\"Free\"}"
+    },
+    {
+      "id": "w2",
+      "title": "CPU Load",
+      "row": 5,
+      "col": 1,
+      "path": "jmx/charts",
+      "include": "app/jmx/html/charts.html",
+      "search": {
+        "nid": "root-java.lang-OperatingSystem",
+        "att": "ProcessCpuLoad%2CSystemCpuLoad%2CSystemLoadAverage"
+      },
+      "hash": "",
+      "size_x": 3,
+      "size_y": 2
+    },
+    {
+      "id": "w8",
+      "title": "",
+      "row": 1,
+      "col": 6,
+      "size_x": 4,
+      "size_y": 7,
+      "path": "jmx/attributes",
+      "include": "app/jmx/html/attributes.html",
+      "search": {
+        "tab": "camel",
+        "nid": "root-org.apache.camel-camel-1-routes-%22route1%22"
+      },
+      "hash": ""
+    }
+  ],
+  "id": "512cefc2bdb5015495",
+  "uri": "/dashboards/team/all/512cefc2bdb5015495.json"
+}

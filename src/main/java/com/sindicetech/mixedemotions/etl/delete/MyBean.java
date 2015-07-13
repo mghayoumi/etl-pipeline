@@ -1,4 +1,4 @@
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.delete;
 
 import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
