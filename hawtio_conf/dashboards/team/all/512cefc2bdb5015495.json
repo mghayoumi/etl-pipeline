@@ -1,10 +1,10 @@
 {
-  "title": "Json-Builder Flow",
+  "title": "MixedEmotions ETL Pipeline",
   "group": "Personal",
   "widgets": [
     {
       "id": "w2",
-      "title": "Json-Builder Flow",
+      "title": "MixedEmotions ETL Pipeline",
       "row": 1,
       "col": 1,
       "size_x": 2,

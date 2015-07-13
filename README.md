@@ -10,7 +10,7 @@
 # Hawt.io
 Hawt.io is a web application that provides monitoring of for example Apache Camel-based applications.
 
-After the pipeline starts up, you can view a preconfigured dashboard at http://localhost:8080/hawtio/dashboard/id/512cefc2bdb5015495
+After the pipeline starts up, you can view a preconfigured dashboard at [http://localhost:8080/hawtio/dashboard/id/512cefc2bdb5015495](http://localhost:8080/hawtio/dashboard/id/512cefc2bdb5015495)
 
 ![Hawt.io dashboard screenshot](docs/img/hawtio.png)
 
