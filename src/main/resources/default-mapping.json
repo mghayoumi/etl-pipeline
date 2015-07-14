@@ -1,0 +1,17 @@
+{
+  "dynamic_templates": [
+    {
+      "default": {
+        "match":              "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type":           "string",
+          "index":          "not_analyzed"
+        }
+      }
+    }
+  ],
+  "_id": {
+    "path": "id"
+  }
+}

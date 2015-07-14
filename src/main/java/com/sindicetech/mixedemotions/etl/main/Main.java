@@ -5,6 +5,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.log.LogComponent;
+import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.SimpleRegistry;
 import org.slf4j.Logger;
@@ -98,12 +99,6 @@ public class Main {
       printHelp();
       System.exit(0);
     }
-
-//    if (!opts.has(CONF)) {
-//      System.err.println("Missing option: specify a configuration file");
-//      printHelp();
-//      System.exit(1);
-//    }
   }
 
   protected void loadConfig(OptionSet opts, String[] args) {
@@ -145,7 +140,12 @@ public class Main {
     CamelContext camelContext = new DefaultCamelContext(registry);
 
     camelContext.addComponent("log", new LogComponent());
-    camelContext.addRoutes(new DwRoute());
+
+    PropertiesComponent pc = new PropertiesComponent();
+    pc.addFunction(new ApplicationConfPropertiesFunction(mainArgs));
+    camelContext.addComponent("properties", pc);
+
+    camelContext.addRoutes(new DwRoute(mainArgs));
 
     camelContext.getShutdownStrategy().setLogInflightExchangesOnTimeout(true);
     camelContext.getShutdownStrategy().setShutdownNowOnTimeout(false);

@@ -41,6 +41,7 @@
       <jopt-simple-version>4.8</jopt-simple-version>
       <jetty-version>7.6.9.v20130131</jetty-version>
       <jetty-webapp-artifactId>jetty-webapp</jetty-webapp-artifactId>
+      <elasticsearch.version>1.6.0</elasticsearch.version>
     </properties>
 
     <dependencies>
@@ -108,6 +109,26 @@
         <groupId>org.eclipse.jetty.aggregate</groupId>
         <artifactId>${jetty-webapp-artifactId}</artifactId>
         <version>${jetty-version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.camel</groupId>
+        <artifactId>camel-elasticsearch</artifactId>
+        <version>${camel-version}</version>
+        <exclusions>
+          <!-- Force camel to use our version of elasticsearch -->
+          <exclusion>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Force camel to use our version of elasticsearch -->
+      <dependency>
+        <groupId>org.elasticsearch</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>${elasticsearch.version}</version>
       </dependency>
 
       <!-- Logging -->

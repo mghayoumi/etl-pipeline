@@ -77,7 +77,7 @@ public class DwApiBean {
         Map<String, Object> headers = new HashMap<>();
         headers.put(Exchange.FILE_NAME, node.get("id").asText());
         headers.put("DwItemUrl", url);
-        producer.sendBodyAndHeaders(ENDPOINT, mapper.writeValueAsString(node), headers);
+        producer.sendBodyAndHeaders(ENDPOINT, node, headers);
       }
 
     }

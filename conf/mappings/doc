@@ -1,0 +1,13 @@
+{
+    "properties": {
+        "displayDate": {
+            "format": "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
+            "ignore_malformed": true,
+            "type": "date"
+        },
+        "teaser": {
+            "index": "analyzed",
+            "type": "string"
+        }
+    }
+}
