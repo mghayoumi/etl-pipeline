@@ -1,5 +1,6 @@
 package com.sindicetech.mixedemotions.etl.main;
 
+import com.sindicetech.mixedemotions.etl.DwConfig;
 import com.sindicetech.mixedemotions.etl.DwRoute;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -145,7 +146,10 @@ public class Main {
     pc.addFunction(new ApplicationConfPropertiesFunction(mainArgs));
     camelContext.addComponent("properties", pc);
 
-    camelContext.addRoutes(new DwRoute(mainArgs));
+    DwConfig config = new DwConfig(mainArgs);
+    config.configure();
+
+    camelContext.addRoutes(new DwRoute(config));
 
     camelContext.getShutdownStrategy().setLogInflightExchangesOnTimeout(true);
     camelContext.getShutdownStrategy().setShutdownNowOnTimeout(false);

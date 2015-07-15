@@ -1,4 +1,4 @@
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.util;
 
 import java.io.InputStream;
 import java.util.Scanner;

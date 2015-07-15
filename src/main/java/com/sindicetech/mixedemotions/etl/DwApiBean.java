@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -32,16 +33,21 @@ public class DwApiBean {
   private static ObjectMapper mapper = new ObjectMapper();
 
   private final ProducerTemplate producer;
+  private final Instant fromDate;
+  private final int maxItems;
+
   public static final String ENDPOINT = "direct:DwApi";
 
-  private LocalDate lastItemDate = LocalDate.parse("1015-07-11T00:00:00.000Z", DateTimeFormatter.ISO_ZONED_DATE_TIME);
+  private Instant lastItemInstant = Instant.parse("1015-07-11T00:00:00.000Z");
 
   private CloseableHttpAsyncClient httpClient;
 
-  public DwApiBean(ProducerTemplate producer) {
+  public DwApiBean(ProducerTemplate producer, int maxItems, Instant fromDate) {
     mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
     this.producer = producer;
+    this.maxItems = maxItems;
+    this.fromDate = fromDate;
 
     this.httpClient = HttpAsyncClients.custom()
         .setMaxConnPerRoute(2)
@@ -51,23 +57,35 @@ public class DwApiBean {
   }
 
   public void process() throws InterruptedException, ExecutionException, IOException {
-    for (int p = 1; p < 2; p++) {
-      ArrayNode items = download(p);
+    int itemsProcessed = 0;
 
-      LocalDate newestDate = LocalDate.parse(items.get(0).get("displayDate").asText(), DateTimeFormatter.ISO_ZONED_DATE_TIME);
+    int p = 1;
+    ApiResponse response = new ApiResponse();
+    response.availablePages = 1;
 
-      if (! newestDate.isAfter(lastItemDate)) {
+    while (p <= response.availablePages) {
+      response = download(p);
+
+      Instant newestInstant = Instant.parse(response.items.get(0).get("displayDate").asText());
+
+      if (! newestInstant.isAfter(lastItemInstant)) {
         logger.info("No new updates.");
         return;
       }
 
-      lastItemDate = newestDate;
+      lastItemInstant = newestInstant;
 
-      logger.info("First item date: " + items.get(0).get("displayDate"));
-      logger.info("Last item date: " + items.get(items.size() - 1).get("displayDate"));
+      logger.info("First item date: " + response.items.get(0).get("displayDate"));
+      logger.info("Last item date: " + response.items.get(response.items.size() - 1).get("displayDate"));
 
-      for (int i = 0; i < Math.min(5, items.size()); i++) {
-        JsonNode item = items.get(i);
+      for (int i = 0; i < response.items.size(); i++) {
+        JsonNode item = response.items.get(i);
+        Instant itemInstant = Instant.parse(item.get("displayDate").asText());
+        if (itemInstant.isBefore(fromDate)) {
+          logger.info("Reached oldest allowed item, date: " + fromDate + " Stopping load.");
+          return;
+        }
+
         String url = item.get("reference").get("url").asText();
         logger.info("Item URL: " + url);
 
@@ -78,8 +96,16 @@ public class DwApiBean {
         headers.put(Exchange.FILE_NAME, node.get("id").asText());
         headers.put("DwItemUrl", url);
         producer.sendBodyAndHeaders(ENDPOINT, node, headers);
+
+        itemsProcessed++;
+
+        if (maxItems != -1 && itemsProcessed >= maxItems) {
+          logger.info("Loaded maximum configured number of items: " + maxItems + " Stopping load.");
+          return;
+        }
       }
 
+      p++;
     }
   }
 
@@ -90,9 +116,16 @@ public class DwApiBean {
     return params.get("sortByDate").asBoolean();
   }
 
-  private ArrayNode download(int page) throws ExecutionException, InterruptedException, IOException {
+  public class ApiResponse {
+    public ArrayNode items;
+    public int availablePages;
+  }
+
+  private ApiResponse download(int page) throws ExecutionException, InterruptedException, IOException {
     Content content = Request.Get("http://www.dw.com/api/list/mediacenter/2?pageIndex=" + page).execute().returnContent();
     JsonNode node = mapper.readTree(content.asStream());
+
+    int availablePages = node.get("paginationInfo").get("availablePages").asInt();
 
     if (!responseOk(node)) {
       throw new RuntimeException("Teaser stream is not sorted by date. From the response: " + node.get("filterParameters"));
@@ -102,7 +135,11 @@ public class DwApiBean {
 
     logger.info(String.format("Got %s items", items.size()));
 
-    return items;
+    ApiResponse response = new ApiResponse();
+    response.items = items;
+    response.availablePages = availablePages;
+
+    return response;
 //    RequestBuilder builder = RequestBuilder.create("GET").setUri("http://www.dw.com/api/list/mediacenter/2?pageIndex=1");
 //    httpClient.execute(builder.build(), new RequestCallback()).get();
   }

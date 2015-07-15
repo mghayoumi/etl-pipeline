@@ -1,11 +1,31 @@
 # MixedEmotions ETL Pipeline
 
+The MixedEmotions ETL Pipeline extracts data from the Deutsche Welle (private) API, enriches it with information
+about detected entities, sentiment, etc., and loads the enriched records into Elasticsearch.
+
+It is an [Apache Camel](http://camel.apache.org/)-based application.
+
 # Building
 `mvn clean package shade:shade`
 
 # Running
 `java -jar target/etl-pipeline-1-jar-with-dependencies.jar -c conf/application.conf`
 
+# Development
+The pipeline is defined in the [DwRoute class](src/main/java/com/sindicetech/mixedemotions/etl/DwRoute.java).
+
+To add a new component, simply add a snippet such as:
+
+```Java
+    // The video transcription route
+    // Perform video transcription and send to the TopicExtraction endpoint
+    from("seda:VideoTranscription?concurrentConsumers=4")
+        .to("log:VideoTranscriptionProcessor?showHeaders=true")
+        .process(new VideoTranscriptionProcessor())
+        .to("direct:TopicExtraction");
+```
+
+and implement the [VideoTranscriptionProcessor class](src/main/java/com/sindicetech/mixedemotions/etl/processor/VideoTranscriptionProcessor.java). 
 
 # Hawt.io
 Hawt.io is a web application that provides monitoring of for example Apache Camel-based applications.

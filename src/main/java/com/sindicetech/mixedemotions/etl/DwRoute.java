@@ -4,22 +4,27 @@
 package com.sindicetech.mixedemotions.etl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.sindicetech.mixedemotions.etl.main.MainArgs;
-import org.apache.camel.LoggingLevel;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sindicetech.mixedemotions.etl.elasticsearch.ElasticsearchIndexChecker;
+import com.sindicetech.mixedemotions.etl.processor.ExpertSystemTopicExtraction;
+import com.sindicetech.mixedemotions.etl.processor.VideoTranscriptionProcessor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.elasticsearch.aggregation.BulkRequestAggregationStrategy;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.elasticsearch.action.index.IndexRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DwRoute extends RouteBuilder {
 
-  public final static int TIMER_PERIOD = 60000;
-  private static final String INDEX_NAME = "mixedemotions";
-  private static final String INDEX_TYPE = "doc";
-  private final MainArgs mainArgs;
 
-  public DwRoute(MainArgs mainArgs) {
-    this.mainArgs = mainArgs;
+  private static final Logger logger = LoggerFactory.getLogger(DwRoute.class.getName());
+  private static final ObjectMapper mapper = new ObjectMapper();
+  private final DwConfig config;
+
+
+  public DwRoute(DwConfig config) {
+    this.config = config;
   }
 
   @Override
@@ -34,8 +39,10 @@ public class DwRoute extends RouteBuilder {
     );
 
     // Trigger pipeline every TIMER_PERIOD ms
-    DwApiBean dwApiBean = new DwApiBean(getContext().createProducerTemplate());
-    from("timer:ping?period=" + TIMER_PERIOD)
+
+
+    DwApiBean dwApiBean = new DwApiBean(getContext().createProducerTemplate(), config.maxItems, config.fromDate);
+    from("timer:ping?period=" + config.timerPeriod.toMillis())
         .bean(dwApiBean, "process");
 
     // Redirect messages from DW's API to a queue for video transcription
@@ -59,25 +66,20 @@ public class DwRoute extends RouteBuilder {
         .to("direct:ElasticsearchBulk");
 
 
-    ElasticsearchIndexChecker elasticsearchIndexChecker = new ElasticsearchIndexChecker(new ElasticsearchMappings(mainArgs));
+    ElasticsearchIndexChecker elasticsearchIndexChecker = new ElasticsearchIndexChecker(config.elasticsearchMappings);
 
     from("direct:ElasticsearchBulk")
-        .to("direct:marshal")
         .process(exchange -> {
-          exchange.getIn().setHeader("indexName", INDEX_NAME);
-          exchange.getIn().setHeader("indexType", INDEX_TYPE);
-          exchange.getIn().setBody(new IndexRequest(INDEX_NAME, INDEX_TYPE).source((byte[]) exchange.getIn().getBody()));
+          JsonNode node = (JsonNode) exchange.getIn().getBody();
+          exchange.getIn().setBody(
+              new IndexRequest(config.indexName, config.indexType, node.get("id").asText())
+                  .source(mapper.writeValueAsString(node))
+          );
         })
         .aggregate(constant(true), new BulkRequestAggregationStrategy()).completionSize(2)
         .bean(elasticsearchIndexChecker, "checkIndex(Exchange,{{appconf:elasticsearch.clusterName}},{{appconf:elasticsearch.ip:localhost}},{{appconf:elasticsearch.port:9300}})")
         .to("elasticsearch://{{appconf:elasticsearch.clusterName}}?ip=localhost&operation=BULK_INDEX");
 
-
-    // The elasticsearch loading route
-    from("direct:ElasticsearchLoad")
-        .to("direct:marshal")
-        .process(new ElasticsearchLoad())
-        .to("log:Load?showHeaders=true");
 
     // Convert body from Json string to JsonNode
     from("direct:unmarshal")

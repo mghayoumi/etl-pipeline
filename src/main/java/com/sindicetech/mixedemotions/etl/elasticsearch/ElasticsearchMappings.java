@@ -1,4 +1,4 @@
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.elasticsearch;
 
 import com.sindicetech.mixedemotions.etl.main.MainArgs;
 import org.slf4j.Logger;

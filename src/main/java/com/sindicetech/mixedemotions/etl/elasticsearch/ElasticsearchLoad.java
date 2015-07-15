@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2015 Renaud Delbru. All Rights Reserved.
  */
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.elasticsearch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;

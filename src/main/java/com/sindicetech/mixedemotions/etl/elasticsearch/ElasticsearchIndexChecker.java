@@ -1,12 +1,16 @@
-package com.sindicetech.mixedemotions.etl;
+package com.sindicetech.mixedemotions.etl.elasticsearch;
 
+import com.sindicetech.mixedemotions.etl.util.StreamUtils;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -17,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -47,10 +52,18 @@ public class ElasticsearchIndexChecker {
     return indexName + "." + indexType;
   }
 
+
+
   public void checkIndex(Exchange exchange, String clusterName, String ip, Integer port) {
     Message message = exchange.getIn();
-    String indexName = (String) message.getHeader(INDEX_HEADER);
-    String indexType = (String) message.getHeader(TYPE_HEADER);
+
+    // we're assuming that all requests are IndexRequests with the same index and type
+    // --> check the first one
+    List<ActionRequest> requests = ((BulkRequest)exchange.getIn().getBody()).requests();
+
+    IndexRequest indexRequest = (IndexRequest) requests.get(0);
+    String indexName = indexRequest.index();
+    String indexType = indexRequest.type();
 
     if (!indexTypesConfigured.contains(key(indexName, indexType))) {
       configureMapping(indexName, indexType, clusterName, ip, port);
