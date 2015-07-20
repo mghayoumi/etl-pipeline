@@ -10,8 +10,11 @@ import org.apache.camel.Processor;
 
 public abstract class RestCallProcessor implements Processor {
 
+  protected Exchange exchange;
+
   @Override
   public void process(final Exchange exchange) throws Exception {
+    this.exchange = exchange;
     ObjectNode body = exchange.getIn().getBody(ObjectNode.class);
     ObjectNode response = body.putObject(this.getResponseKey());
 

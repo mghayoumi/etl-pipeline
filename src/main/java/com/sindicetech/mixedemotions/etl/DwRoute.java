@@ -32,7 +32,7 @@ public class DwRoute extends RouteBuilder {
     errorHandler(
         // When the processing of a message fails, the message is sent to the errors endpoint
         deadLetterChannel("seda:errors")
-            .log("log").logHandled(true)
+            .log(logger).logHandled(true)
             //.loggingLevel(LoggingLevel.INFO).logStackTrace(true)
             // retry 3 times to process the message
             .maximumRedeliveries(3).redeliveryDelay(50)
@@ -42,33 +42,35 @@ public class DwRoute extends RouteBuilder {
 
 
     DwApiBean dwApiBean = new DwApiBean(getContext().createProducerTemplate(), config.maxItems, config.fromDate);
-    from("timer:ping?period=" + config.timerPeriod.toMillis())
-        .bean(dwApiBean, "process");
+    from("timer:ping?period=" + config.timerPeriod.toMillis()).routeId("DW-API-processor")
+        .bean(dwApiBean, "process")
+        .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})");
 
     // Redirect messages from DW's API to a queue for video transcription
-    from("direct:DwApi")
+    from("direct:DwApi").routeId("queue-for-video-transcription")
         //.to("direct:unmarshal")
         .to("seda:VideoTranscription");
 
     // The video transcription route
     // Perform video transcription and send to the TopicExtraction endpoint
-    from("seda:VideoTranscription?concurrentConsumers=4")
-        .to("log:VideoTranscriptionProcessor?showHeaders=true")
+    from("seda:VideoTranscription?concurrentConsumers=4").routeId("VideoTranscription")
+//        .to("log:VideoTranscriptionProcessor?showHeaders=true")
+        .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
         .process(new VideoTranscriptionProcessor())
         .to("direct:TopicExtraction");
 
     // The topic extraction route
     // Perform topic extraction on the video transcription and send to the ElasticsearchLoad endpoint
-    from("direct:TopicExtraction")
-        .to("log:EsTopicExtraction?showHeaders=true")
+    from("direct:TopicExtraction").routeId("TopicExtraction")
+//        .to("log:EsTopicExtraction?showHeaders=true")
         .process(new ExpertSystemTopicExtraction())
-        .to("log:EsTopicExtractionRESULT")
+        .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
         .to("direct:ElasticsearchBulk");
 
 
     ElasticsearchIndexChecker elasticsearchIndexChecker = new ElasticsearchIndexChecker(config.elasticsearchMappings);
 
-    from("direct:ElasticsearchBulk")
+    from("direct:ElasticsearchBulk").routeId("ElasticsearchIndexing")
         .process(exchange -> {
           JsonNode node = (JsonNode) exchange.getIn().getBody();
           exchange.getIn().setBody(
@@ -76,8 +78,9 @@ public class DwRoute extends RouteBuilder {
                   .source(mapper.writeValueAsString(node))
           );
         })
-        .aggregate(constant(true), new BulkRequestAggregationStrategy()).completionSize(2)
+        .aggregate(constant(true), new BulkRequestAggregationStrategy()).completionSize(100).completionTimeout(10_000)
         .bean(elasticsearchIndexChecker, "checkIndex(Exchange,{{appconf:elasticsearch.clusterName}},{{appconf:elasticsearch.ip:localhost}},{{appconf:elasticsearch.port:9300}})")
+        .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
         .to("elasticsearch://{{appconf:elasticsearch.clusterName}}?ip=localhost&operation=BULK_INDEX");
 
 

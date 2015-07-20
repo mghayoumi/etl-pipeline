@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.sindicetech.mixedemotions.etl.util.StreamUtils;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
 import org.apache.http.client.fluent.Content;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.concurrent.FutureCallback;
@@ -18,8 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutionException;
  *
  */
 public class DwApiBean {
+
+  public static final String DW_ITEM_URL = "DwItemUrl";
 
   private Logger logger = LoggerFactory.getLogger(this.getClass());
   private static ObjectMapper mapper = new ObjectMapper();
@@ -56,116 +58,154 @@ public class DwApiBean {
     httpClient.start();
   }
 
+  /**
+   * Checks for updates loads new ones if available.
+   *
+   * Loads updates until any limit is reached (fromDate, or maximum number of items).
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws IOException
+   */
   public void process() throws InterruptedException, ExecutionException, IOException {
     int itemsProcessed = 0;
 
     int p = 1;
-    ApiResponse response = new ApiResponse();
-    response.availablePages = 1;
+    ApiResponse response = downloadPage(p);
+    if (! response.ok) {
+      logger.error("Couldn't download the first page of the DW list API: " + response.statusLine);
+      return;
+    }
+    Instant newestItemInstant = Instant.parse(response.items.get(0).get("displayDate").asText());
 
-    while (p <= response.availablePages) {
-      response = download(p);
+    if (! newestItemInstant.isAfter(lastItemInstant)) {
+      logger.info("No new updates.");
+      return;
+    }
 
-      Instant newestInstant = Instant.parse(response.items.get(0).get("displayDate").asText());
+    loadPages: while (p <= response.availablePages) {
+      logger.info("Downloading page " + p);
+      int lastAvailablePages = response.availablePages;
+      response = downloadPage(p);
+      if (!response.ok) {
+        if (p < lastAvailablePages) {
+          logger.warn(String.format("Problem downloading page %s. Trying page %s out of %s.", p, p+1, lastAvailablePages));
+          response.availablePages = lastAvailablePages;
+          p++;
+          continue;
+        }
 
-      if (! newestInstant.isAfter(lastItemInstant)) {
-        logger.info("No new updates.");
+        logger.warn(String.format("Problem downloading page %s out of %s.", p, lastAvailablePages));
         return;
       }
 
-      lastItemInstant = newestInstant;
-
-      logger.info("First item date: " + response.items.get(0).get("displayDate"));
-      logger.info("Last item date: " + response.items.get(response.items.size() - 1).get("displayDate"));
+      logger.info("\tFirst item date: " + response.items.get(0).get("displayDate"));
+      logger.info("\tLast item date: " + response.items.get(response.items.size() - 1).get("displayDate"));
 
       for (int i = 0; i < response.items.size(); i++) {
         JsonNode item = response.items.get(i);
         Instant itemInstant = Instant.parse(item.get("displayDate").asText());
         if (itemInstant.isBefore(fromDate)) {
-          logger.info("Reached oldest allowed item, date: " + fromDate + " Stopping load.");
-          return;
+          logger.info(String.format("Reached an item older (%s) than the oldest allowed date (%s). Stopping load.", itemInstant, fromDate));
+          break loadPages;
+        }
+
+        if (itemInstant.isBefore(lastItemInstant)) {
+          logger.info(String.format("Reached a previously loaded item (%s). Stopping load.", itemInstant));
+          break loadPages;
         }
 
         String url = item.get("reference").get("url").asText();
         logger.info("Item URL: " + url);
 
-        Content content = Request.Get(url).execute().returnContent();
-        JsonNode node = mapper.readTree(content.asStream());
+        JsonNode node = downloadItem(url);
+        if (node == null) {
+          continue;
+        }
 
         Map<String, Object> headers = new HashMap<>();
         headers.put(Exchange.FILE_NAME, node.get("id").asText());
-        headers.put("DwItemUrl", url);
+        headers.put(DW_ITEM_URL, url);
         producer.sendBodyAndHeaders(ENDPOINT, node, headers);
 
         itemsProcessed++;
 
         if (maxItems != -1 && itemsProcessed >= maxItems) {
           logger.info("Loaded maximum configured number of items: " + maxItems + " Stopping load.");
-          return;
+          break loadPages;
         }
       }
 
       p++;
     }
-  }
-
-  private boolean responseOk(JsonNode node) {
-    JsonNode params = node.get("filterParameters");
-
-    // we assume the response is sorted by date
-    return params.get("sortByDate").asBoolean();
+    lastItemInstant = newestItemInstant;
   }
 
   public class ApiResponse {
+    public StatusLine statusLine;
+    public boolean ok = false;
     public ArrayNode items;
     public int availablePages;
   }
 
-  private ApiResponse download(int page) throws ExecutionException, InterruptedException, IOException {
-    Content content = Request.Get("http://www.dw.com/api/list/mediacenter/2?pageIndex=" + page).execute().returnContent();
-    JsonNode node = mapper.readTree(content.asStream());
+  private JsonNode downloadItem(String url) throws IOException {
+    HttpResponse response = Request.Get(url).execute().returnResponse();
+    StatusLine statusLine = response.getStatusLine();
 
-    int availablePages = node.get("paginationInfo").get("availablePages").asInt();
-
-    if (!responseOk(node)) {
-      throw new RuntimeException("Teaser stream is not sorted by date. From the response: " + node.get("filterParameters"));
+    if (statusLine.getStatusCode() / 100 != 2) {
+      logger.warn(String.format("Couldn't download item %s. Response status: %s", url, statusLine.toString()));
+      return null;
     }
 
-    ArrayNode items = (ArrayNode) node.get("items");
-
-    logger.info(String.format("Got %s items", items.size()));
-
-    ApiResponse response = new ApiResponse();
-    response.items = items;
-    response.availablePages = availablePages;
-
-    return response;
-//    RequestBuilder builder = RequestBuilder.create("GET").setUri("http://www.dw.com/api/list/mediacenter/2?pageIndex=1");
-//    httpClient.execute(builder.build(), new RequestCallback()).get();
+    return mapper.readTree(StreamUtils.streamToString(response.getEntity().getContent()));
   }
 
+  private ApiResponse downloadPage(int page) throws InterruptedException, IOException {
+    HttpResponse httpResponse = Request.Get("http://www.dw.com/api/list/mediacenter/2?pageIndex=" + page).execute().returnResponse();
+    ApiResponse response = new ApiResponse();
 
-  class RequestCallback implements FutureCallback<HttpResponse> {
-    @Override
-    public void completed(HttpResponse result) {
+    StatusLine statusLine = httpResponse.getStatusLine();
+    response.statusLine = statusLine;
+    if (statusLine.getStatusCode() / 100 != 2) {
+      logger.warn(String.format("Problem downloading page %s: %s", page, statusLine.toString()));
+      response.ok = false;
+    } else {
+      response.ok = true;
+    }
 
-      InputStream is;
-      try {
-        is = result.getEntity().getContent();
-      } catch (IOException ex) {
-        throw new RuntimeException(String.format("Request failed: %s", ex.getMessage()));
+    JsonNode node = mapper.readTree(httpResponse.getEntity().getContent());
+
+    if (!(node.has("paginationInfo") && node.get("paginationInfo").has("availablePages"))) {
+      response.ok = false;
+      logger.warn(String.format("Page %s doesn't have field 'paginationInfo.availablePages'", page));
+    } else {
+      response.availablePages = node.get("paginationInfo").get("availablePages").asInt();
+    }
+
+    if (!(node.has("filterParameters") && node.get("filterParameters").has("sortByDate"))) {
+      response.ok = false;
+      logger.warn(String.format("Page %s doesn't have field 'filterParameters.sortByDate'", page));
+    }
+    else {
+      JsonNode params = node.get("filterParameters");
+
+      // we assume the response is sorted by date
+      if (! params.get("sortByDate").asBoolean()) {
+        String msg = "Teaser stream is not sorted by date. From the response: " + node.get("filterParameters");
+        logger.error(msg);
+        throw new RuntimeException(msg);
       }
     }
 
-    @Override
-    public void failed(Exception ex) {
-      logger.error(String.format("Request failed: %s", ex.getMessage()));
+    if (!node.has("items")) {
+      response.ok = false;
+      logger.warn(String.format("Page %s doesn't have field 'items'", page));
+    }  else {
+      response.items = (ArrayNode) node.get("items");
+      logger.debug(String.format("Got %s items", response.items.size()));
     }
 
-    @Override
-    public void cancelled() {
-      logger.error(String.format("Request was cancelled"));
-    }
+    return response;
   }
 }
 

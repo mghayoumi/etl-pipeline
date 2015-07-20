@@ -7,10 +7,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sindicetech.mixedemotions.etl.DwApiBean;
+import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
 import org.apache.http.client.fluent.Content;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.apache.http.message.BasicNameValuePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Random;
@@ -18,6 +23,8 @@ import java.util.Random;
 public class ExpertSystemTopicExtraction extends RestCallProcessor {
 
   public static final String RESPONSE_KEY = "topic-extraction";
+
+  private static final Logger logger = LoggerFactory.getLogger(ExpertSystemTopicExtraction.class);
   private static ObjectMapper mapper = new ObjectMapper();
 
   private enum Header {
@@ -81,14 +88,26 @@ public class ExpertSystemTopicExtraction extends RestCallProcessor {
   }
 
   private JsonNode callPackApi(CogitoService service, String text) throws IOException {
-    Content content = Request.Post(service.url)
+    HttpResponse response = Request.Post(service.url)
         .addHeader(Header.APPJSON.name, Header.APPJSON.value)
         .addHeader(Header.APIKEY.name, Header.APIKEY.value)
         .bodyForm(new BasicNameValuePair("text", text))
-        .execute().returnContent();
+        .execute().returnResponse();
 
-    JsonNode analysisResult = mapper.readTree(content.asStream())
-        .get("analysisResult");
+    StatusLine statusLine = response.getStatusLine();
+    if (statusLine.getStatusCode() / 100 != 2) {
+      logger.warn(String.format("Request for item %s to %s failed with text '%s'. Response status: %s",
+          exchange.getIn().getHeader(DwApiBean.DW_ITEM_URL), service.url, text, statusLine.toString()));
+      return null;
+    }
+
+    JsonNode analysisResult = mapper.readTree(response.getEntity().getContent());
+
+    if (!analysisResult.has("analysisResult")) {
+      logger.warn(String.format("Wrong response from %s. Doesn't contain field 'analysisResult'", service.url));
+      return null;
+    }
+    analysisResult = analysisResult.get("analysisResult");
 
     return analysisResult;
   }
@@ -97,7 +116,7 @@ public class ExpertSystemTopicExtraction extends RestCallProcessor {
     ObjectNode entities = mapper.createObjectNode();
 
     JsonNode analysisResult = callPackApi(CogitoService.KERNEL_PACK, text);
-    entities.set("result", analysisResult.deepCopy());
+    entities.set("result", analysisResult != null ? analysisResult.deepCopy() : mapper.createObjectNode().put("failed", "failed"));
 
 //    analysisResult = callApi(CogitoService.KERNEL_PLACES, text);
 //    entities.set("places_kernel", analysisResult.deepCopy());
@@ -115,7 +134,15 @@ public class ExpertSystemTopicExtraction extends RestCallProcessor {
   protected void process(final JsonNode body, ObjectNode response) throws Exception {
     String transcription = body.path(VideoTranscriptionProcessor.RESPONSE_KEY).path("transcription").asText();
 
-    JsonNode entities = extractEntities(transcription);
+    JsonNode entities;
+
+    if (transcription.trim().isEmpty()) {
+      logger.info(String.format("Item %s has an empty transcription. Skpping topic extraction.",
+          exchange.getIn().getHeader(DwApiBean.DW_ITEM_URL)));
+      entities = mapper.createObjectNode();
+    } else {
+      entities = extractEntities(transcription);
+    }
 
     response.set("entities", entities);
 

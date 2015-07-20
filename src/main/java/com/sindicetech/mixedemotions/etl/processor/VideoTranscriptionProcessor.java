@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class VideoTranscriptionProcessor extends RestCallProcessor {
 
-  final public static int DELAY_TIME = 3000;
+  final public static int DELAY_TIME = 30;
 
   public static final String RESPONSE_KEY = "video-transcription";
 
