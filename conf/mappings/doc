@@ -8,6 +8,42 @@
         "teaser": {
             "index": "analyzed",
             "type": "string"
+        },
+        "name": {
+         "index": "analyzed",
+         "type": "string"
+        },
+        "mainContent": {
+          "properties": {
+            "name": {
+             "index": "analyzed",
+             "type": "string"
+            }
+          }
+        },
+        "topic-extraction": {
+          "properties": {
+            "entities": {
+              "properties": {
+                "result": {
+                  "properties": {
+                    "summary": {
+                      "properties": {
+                        "mainSentences": {
+                          "properties": {
+                            "value": {
+                              "index": "analyzed",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
     }
 }

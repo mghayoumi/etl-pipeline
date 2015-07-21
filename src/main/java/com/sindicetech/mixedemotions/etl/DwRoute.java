@@ -5,6 +5,7 @@ package com.sindicetech.mixedemotions.etl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sindicetech.mixedemotions.etl.elasticsearch.ElasticsearchIndexChecker;
 import com.sindicetech.mixedemotions.etl.processor.ExpertSystemTopicExtraction;
 import com.sindicetech.mixedemotions.etl.processor.VideoTranscriptionProcessor;
@@ -65,8 +66,23 @@ public class DwRoute extends RouteBuilder {
 //        .to("log:EsTopicExtraction?showHeaders=true")
         .process(new ExpertSystemTopicExtraction())
         .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
-        .to("direct:ElasticsearchBulk");
+        .to("direct:TopicExtractionJsonTransformation");
 
+    from("direct:TopicExtractionJsonTransformation").routeId("TopicExtractionJsonTransformation")
+//        .to("log:EsTopicExtraction?showHeaders=true")
+        .process(exchange -> {
+              ObjectNode node = exchange.getIn().getBody(ObjectNode.class);
+
+              JsonNode sizes = node.path("mainContent").path("previewImage").path("sizes");
+              if (sizes.isMissingNode() || !sizes.isArray()) {
+                return;
+              }
+
+              ((ObjectNode)node.path("mainContent").path("previewImage")).set("singleUrl", sizes.path(0).path("url"));
+            }
+        )
+        .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
+        .to("direct:ElasticsearchBulk");
 
     ElasticsearchIndexChecker elasticsearchIndexChecker = new ElasticsearchIndexChecker(config.elasticsearchMappings);
 
@@ -96,7 +112,7 @@ public class DwRoute extends RouteBuilder {
     // for further inspection and debug.
     from("seda:errors")
         .transform(simple("Headers: ${headers}, Body: ${body}"))
-      .to("file:errors?fileName=${date:now:yyyyMMdd}/${file:name}");
+        .to("file:errors?fileName=${date:now:yyyyMMdd}/${file:name}");
 
   }
 
