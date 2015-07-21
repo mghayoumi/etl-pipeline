@@ -96,16 +96,22 @@ public class ExpertSystemTopicExtraction extends RestCallProcessor {
 
     StatusLine statusLine = response.getStatusLine();
     if (statusLine.getStatusCode() / 100 != 2) {
-      logger.warn(String.format("Request for item %s to %s failed with text '%s'. Response status: %s",
-          exchange.getIn().getHeader(DwApiBean.DW_ITEM_URL), service.url, text, statusLine.toString()));
-      return null;
+      String msg = String.format("Request for item %s to %s failed with text '%s'. Response status: %s",
+          exchange.getIn().getHeader(DwApiBean.DW_ITEM_URL), service.url, text, statusLine.toString());
+      logger.warn(msg);
+
+      //fail fast
+      throw new RuntimeException(msg);
     }
 
     JsonNode analysisResult = mapper.readTree(response.getEntity().getContent());
 
     if (!analysisResult.has("analysisResult")) {
-      logger.warn(String.format("Wrong response from %s. Doesn't contain field 'analysisResult'", service.url));
-      return null;
+      String msg = String.format("Wrong response from %s. Doesn't contain field 'analysisResult'", service.url);
+      logger.warn(msg);
+
+      //fail fast
+      throw new RuntimeException(msg);
     }
     analysisResult = analysisResult.get("analysisResult");
 
@@ -116,7 +122,8 @@ public class ExpertSystemTopicExtraction extends RestCallProcessor {
     ObjectNode entities = mapper.createObjectNode();
 
     JsonNode analysisResult = callPackApi(CogitoService.KERNEL_PACK, text);
-    entities.set("result", analysisResult != null ? analysisResult.deepCopy() : mapper.createObjectNode().put("failed", "failed"));
+
+    entities.set("result", analysisResult.deepCopy());
 
 //    analysisResult = callApi(CogitoService.KERNEL_PLACES, text);
 //    entities.set("places_kernel", analysisResult.deepCopy());
