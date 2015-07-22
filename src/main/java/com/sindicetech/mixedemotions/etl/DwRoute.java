@@ -95,7 +95,7 @@ public class DwRoute extends RouteBuilder {
           );
         })
         .aggregate(constant(true), new BulkRequestAggregationStrategy()).completionSize(100).completionTimeout(10_000)
-        .bean(elasticsearchIndexChecker, "checkIndex(Exchange,{{appconf:elasticsearch.clusterName}},{{appconf:elasticsearch.ip:localhost}},{{appconf:elasticsearch.port:9300}})")
+        .bean(elasticsearchIndexChecker, "checkIndex(Exchange,{{appconf:elasticsearch.clusterName:elasticsearch}},{{appconf:elasticsearch.ip:localhost}},{{appconf:elasticsearch.port:9300}})")
         .log("Processing ${header." + DwApiBean.DW_ITEM_URL + "} (${id})")
         .to("elasticsearch://{{appconf:elasticsearch.clusterName}}?ip=localhost&operation=BULK_INDEX");
 
