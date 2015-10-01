@@ -3,6 +3,10 @@ package com.sindicetech.mixedemotions.etl;
 import com.sindicetech.mixedemotions.etl.elasticsearch.ElasticsearchMappings;
 import com.sindicetech.mixedemotions.etl.main.MainArgs;
 import com.typesafe.config.Config;
+
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -132,6 +136,10 @@ public class DwConfig {
         .put("client.transport.sniff", true)
         .build();
     TransportClient client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(elasticsearchIp, elasticsearchTransportPort));
+
+    if (!client.admin().indices().exists(new IndicesExistsRequest(indexName)).actionGet().isExists()) {
+      return fromDate;
+    }
 
     String query = "{\n" +
         "  \"aggs\": {\n" +
